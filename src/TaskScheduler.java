@@ -1,5 +1,4 @@
 import java.io.*;
-import java.nio.file.FileAlreadyExistsException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -48,74 +47,126 @@ public class TaskScheduler {
 
     static void scheduler(String file1, String file2, Integer m){
         try {
+            //Read file1 and extract the context.
             FileInputStream inputFile = new FileInputStream(file1);
-            BufferedReader readBuffer = new BufferedReader(new InputStreamReader(inputFile));
-//            String s = new String();
-            int value;
-//            String name = "";
-            String[] tiny = new String[1000];
-            for(int i = 0; i < 1000; i++)
+            int value; //ascii value (BufferedReader.read() return ascii value whch reads every character)
+
+            String[] tiny = new String[100];
+            for(int i = 0; i < 100; i++)
                 tiny[i] = "";
 
-            int i = 0;
-            while ((value = readBuffer.read()) != -1){
+            int indexOfInput = 0;
+            char checkLastCha = ' ';
+            while ((value = inputFile.read()) != -1){
                 char S = (char) value;
                 if (S == ' ' || S == '\n'){
-                    ++i;
+                    if(checkLastCha != S) {
+                        ++indexOfInput;
+                    }
                 }else{
-                    tiny[i] += S;
+
+                    tiny[indexOfInput] += S;
                 }
-            }
-            for (int j = 0 ; j <= i; j++){
-                System.out.println(tiny[j]);
+                checkLastCha = S;
             }
 
-            int total = (i+1)/3;
-            Task[] task = new Task[total + 1];
-            for(int j = 0;  j < total + 1; j++)
+            int numberOfInput = indexOfInput;
+            // store strings into Task. Three string describe a task at a time.
+            int numberOfTask = (indexOfInput+1)/3; // the number of task.
+            if ( (indexOfInput + 1) % 3 != 0 ) {
+                System.out.println(indexOfInput+1);
+                System.out.println("The task attributes of file1 are illegal!");
+                return;
+            }
+
+            HeapPriorityQueue<Integer, Task> heap = new HeapPriorityQueue<Integer, Task>();
+
+            Task[] task = new Task[numberOfTask + 1];
+            for(int j = 0;  j < numberOfTask + 1; j++)
                 task[j] = new Task();
-//            task[0].taskName = "aaa";
-            int  k = 0;
-//            for(int j = 0; j <=2 ; j++)
-//                System.out.println(tiny[j]);
+            int indextOfTask = 0;
+            int last = 0;
+            for (int j = 0; j <= numberOfInput; ){
+                char a = tiny[j].charAt(0);
+                if (!Character.isAlphabetic(a) ) {
+                    System.out.print(a+"\n");
+                    System.out.println("task name is illegal!");
+                    return;
+                }
 
-            for (int j = 0; j <= i; ){
-                task[k].setTaskName(tiny[j++]);
-                task[k].setReleasetime(Integer.parseInt(tiny[j++]));
-                task[k].setDeadline(Integer.parseInt(tiny[j++]));
-                k++;
+
+                // Deadline stored as key and Taskname stored as value in Entry<K,V>.
+                task[indextOfTask].setTaskName(tiny[j++]);
+                task[indextOfTask].setReleasetime(Integer.parseInt(tiny[j++]));
+                task[indextOfTask].setDeadline(Integer.parseInt(tiny[j++]));
+
+                // find the last time
+                if (last < task[indextOfTask].getDeadline())
+                    last = task[indextOfTask].getDeadline();
+
+                // insert
+                heap.insert(task[indextOfTask].getDeadline(), task[indextOfTask]);
+                indextOfTask++;
             }
+
+            String sortedS = new String();
+
+            int[] core = new int[last+1];
+
+            while(!heap.isEmpty()){
+                Task it = heap.removeMin().getValue();
+
+                int rt = it.getReleasetime();
+                int dl = it.getDeadline();
+                int actualStart = -1;
+                for(int i = rt; i < dl; i++) {
+                    if (core[i] < m) {
+                        actualStart = i;
+                        core[i]++;
+                        break;
+                    }
+                }
+                if (actualStart == -1){
+//                    System.out.println(it.getTaskName());
+                    System.out.printf("There is no feasible schedule on %d cores\n", m);
+                    return;
+                }
+                sortedS += it.getTaskName()+" "+actualStart+" ";
+            }
+
 
             File f = new File(file2);
-//            if (f.exists()){
-//                System.out.println("file2 already exits");
-//            }
             FileOutputStream outputFile = new FileOutputStream(f);
 
             String outputS = new String();
-            for(int j = 0; j < total; j++)
+            for(int j = 0; j < numberOfTask; j++)
                 outputS += task[j].getTaskName();
-//             s  = "Hello, man!";
-            outputFile.write(outputS.getBytes());
-//            System.out.println(s);
+            outputFile.write(sortedS.getBytes());
+            System.out.printf("There is a feasible schedule on %d cores\n", m);
+
         }catch (FileNotFoundException e){
             System.out.println("file1 does not exits.");
         }catch (IOException e) {
             e.printStackTrace();
+        }catch (NumberFormatException e) {
+            System.out.println("Release time or deadlines are illegal!");
         }
 
 
     }
 
+
+
+
     public static void main(String[] args) throws Exception{
 
         TaskScheduler.scheduler("samplefile1.txt", "feasibleschedule1", 4);
         /** There is a feasible schedule on 4 cores */
-//        TaskScheduler.scheduler("samplefile1.txt", "feasibleschedule2", 3);
+        TaskScheduler.scheduler("samplefile1.txt", "feasibleschedule2", 3);
         /** There is no feasible schedule on 3 cores */
-//        TaskScheduler.scheduler("samplefile2.txt", "feasibleschedule3", 5);
+        TaskScheduler.scheduler("samplefile2.txt", "feasibleschedule3", 5);
         /** There is a feasible scheduler on 5 cores */
-//        TaskScheduler.scheduler("samplefile2.txt", "feasibleschedule4", 4);
+        TaskScheduler.scheduler("samplefile2.txt", "feasibleschedule4", 4);
         /** There is no feasible schedule on 4 cores */
 
         /** The sample task sets are sorted. You can shuffle the tasks and test your program again */
@@ -124,12 +175,6 @@ public class TaskScheduler {
 
 
 
-
-interface Task<T, R, D>{
-    public String getName();
-    public int getReleasetime();
-    public int getDeadline();
-}
 
 
 //begin#fragment HeapPriorityQueue
