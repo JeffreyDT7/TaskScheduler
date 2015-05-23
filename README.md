@@ -1,1 +1,1 @@
-Assignment 3 of COMP9024.(see assign3.pdf)
+Assignment 3.(see assign3.pdf)
