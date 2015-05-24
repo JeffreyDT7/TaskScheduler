@@ -62,24 +62,34 @@ public class TaskScheduler {
 
             int indexOfInput = 0;
             char checkLastCha = ' ';
+            char S = ' ';
             while ((value = inputFile.read()) != -1){
-                char S = (char) value;
+                S = (char) value;
                 if (S == ' ' || S == '\n'){
-                    if(checkLastCha != ' ') {
+                    if(checkLastCha != ' ' && checkLastCha != '\n') {
                         ++indexOfInput;
                     }
                 }else{
-
                     tiny[indexOfInput] += S;
                 }
                 checkLastCha = S;
             }
+//            if(tiny[indexOfInput].charAt(0) == ' ' ||
+//                    tiny[indexOfInput].charAt(0) == '\n' )
+//                indexOfInput--;
+            if (S == '\n' || S == '\n'){
+                indexOfInput--;
+            }
+
+//            for (int i = 0; i <= indexOfInput; i++) {
+//                System.out.println(tiny[i]);
+//            }
 
             int numberOfInput = indexOfInput;
             // store strings into Task. Three string describe a task at a time.
             int numberOfTask = (indexOfInput+1)/3; // the number of task.
             if ( (indexOfInput + 1) % 3 != 0 ) {
-                System.out.println(indexOfInput+1);
+//                System.out.println(indexOfInput+1);
                 System.out.println("The task attributes of file1 are illegal!");
                 return;
             }
@@ -139,7 +149,7 @@ public class TaskScheduler {
                 heapforActualStart.insert(it.getActualStart(), it);
                 if (it.getActualStart() == -1){
 //                    System.out.println(it.getTaskName());
-                    System.out.printf("There is no feasible schedule on %d cores\n", m);
+                    System.out.printf("No feasible schedule on %d cores\n", m);
                     return;
                 }
 //                sortedS += it.getTaskName()+" "+actualStart+" ";
