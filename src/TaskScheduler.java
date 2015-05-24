@@ -9,10 +9,12 @@ import java.util.NoSuchElementException;
  */
 public class TaskScheduler {
 
+    // record Task's attributes
     public static class Task{
         String taskName;
         int releasetime;
         int deadline;
+        int actualStart;
         public Task(String s, int t1, int t2){
             taskName = s;
             releasetime = t1;
@@ -42,6 +44,9 @@ public class TaskScheduler {
         public int getDeadline(){
             return deadline;
         }
+
+        public void setActualStart(int t3){ actualStart = t3;}
+        public int getActualStart(){ return actualStart;}
     }
 
 
@@ -51,8 +56,8 @@ public class TaskScheduler {
             FileInputStream inputFile = new FileInputStream(file1);
             int value; //ascii value (BufferedReader.read() return ascii value whch reads every character)
 
-            String[] tiny = new String[100];
-            for(int i = 0; i < 100; i++)
+            String[] tiny = new String[1000];
+            for(int i = 0; i < 1000; i++)
                 tiny[i] = "";
 
             int indexOfInput = 0;
@@ -60,7 +65,7 @@ public class TaskScheduler {
             while ((value = inputFile.read()) != -1){
                 char S = (char) value;
                 if (S == ' ' || S == '\n'){
-                    if(checkLastCha != S) {
+                    if(checkLastCha != ' ') {
                         ++indexOfInput;
                     }
                 }else{
@@ -79,7 +84,8 @@ public class TaskScheduler {
                 return;
             }
 
-            HeapPriorityQueue<Integer, Task> heap = new HeapPriorityQueue<Integer, Task>();
+            HeapPriorityQueue<Integer, Task> heapforDeadline = new HeapPriorityQueue<Integer, Task>();
+            HeapPriorityQueue<Integer, Task> heapforActualStart = new HeapPriorityQueue<Integer, Task>();
 
             Task[] task = new Task[numberOfTask + 1];
             for(int j = 0;  j < numberOfTask + 1; j++)
@@ -104,35 +110,47 @@ public class TaskScheduler {
                 if (last < task[indextOfTask].getDeadline())
                     last = task[indextOfTask].getDeadline();
 
-                // insert
-                heap.insert(task[indextOfTask].getDeadline(), task[indextOfTask]);
+                // 1. insert, the i_th insert takes O(1+logi) time.
+                heapforDeadline.insert(task[indextOfTask].getDeadline(), task[indextOfTask]);
                 indextOfTask++;
             }
 
             String sortedS = new String();
 
             int[] core = new int[last+1];
-
-            while(!heap.isEmpty()){
-                Task it = heap.removeMin().getValue();
+            /**
+             * Combine 1.insert O(1+logi) time with 2. removeMin O(1+log(n-j+1).
+             * The time complexity of Heap_sort is O(nlogn).
+             */
+            while(!heapforDeadline.isEmpty()){
+                // 2.removeMin, the i_th removeMin() takes O(1+log(n-j+1)) time.
+                Task it = heapforDeadline.removeMin().getValue();
 
                 int rt = it.getReleasetime();
                 int dl = it.getDeadline();
-                int actualStart = -1;
+                it.setActualStart(-1);
                 for(int i = rt; i < dl; i++) {
                     if (core[i] < m) {
-                        actualStart = i;
+                        it.setActualStart(i);
                         core[i]++;
                         break;
                     }
                 }
-                if (actualStart == -1){
+                heapforActualStart.insert(it.getActualStart(), it);
+                if (it.getActualStart() == -1){
 //                    System.out.println(it.getTaskName());
                     System.out.printf("There is no feasible schedule on %d cores\n", m);
                     return;
                 }
-                sortedS += it.getTaskName()+" "+actualStart+" ";
+//                sortedS += it.getTaskName()+" "+actualStart+" ";
             }
+
+            // same as sort Deadline.
+            while (!heapforActualStart.isEmpty()){
+                Task it = heapforActualStart.removeMin().getValue();
+                sortedS += it.getTaskName()+ " "+it.getActualStart()+" ";
+            }
+
 
 
             File f = new File(file2);
